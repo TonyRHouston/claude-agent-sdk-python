@@ -1,73 +1,42 @@
 name: Create Release Tag
-
 on:
-  pull_request:
-    types: [closed]
-    branches: [main]
-
+  workflow_dispatch: {}
 jobs:
   create-tag:
-    if: github.event.pull_request.merged == true && startsWith(github.event.pull_request.head.ref, 'release/v')
+    if: github.event.pull_request.merged == true && startsWith(github.event.pull_request.head.ref,
+      'release/v')
     runs-on: ubuntu-latest
     permissions:
       contents: write
-    
     steps:
     - uses: actions/checkout@v4
       with:
         fetch-depth: 0
-    
     - name: Extract version from branch name
       id: extract_version
-      run: |
-        BRANCH_NAME="${{ github.event.pull_request.head.ref }}"
+      run: 'BRANCH_NAME="${{ github.event.pull_request.head.ref }}"
+
         VERSION="${BRANCH_NAME#release/v}"
+
         echo "version=$VERSION" >> $GITHUB_OUTPUT
-    
+
+        '
     - name: Create and push tag
-      run: |
-        git config --local user.email "github-actions[bot]@users.noreply.github.com"
-        git config --local user.name "github-actions[bot]"
-        
-        # Create annotated tag
-        git tag -a "v${{ steps.extract_version.outputs.version }}" \
-          -m "Release v${{ steps.extract_version.outputs.version }}"
-        
-        # Push tag
-        git push origin "v${{ steps.extract_version.outputs.version }}"
-    
+      run: "git config --local user.email \"github-actions[bot]@users.noreply.github.com\"\
+        \ngit config --local user.name \"github-actions[bot]\"\n\n# Create annotated\
+        \ tag\ngit tag -a \"v${{ steps.extract_version.outputs.version }}\" \\\n \
+        \ -m \"Release v${{ steps.extract_version.outputs.version }}\"\n\n# Push tag\n\
+        git push origin \"v${{ steps.extract_version.outputs.version }}\"\n"
     - name: Create GitHub Release
       env:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      run: |
-        VERSION="${{ steps.extract_version.outputs.version }}"
-
-        # Extract changelog section for this version to a temp file
-        awk -v ver="$VERSION" '
-          /^## / {
-            if (found) exit
-            if ($2 == ver) found=1
-            next
-          }
-          found { print }
-        ' CHANGELOG.md > release_notes.md
-
-        # Append install instructions
-        {
-          echo ""
-          echo "---"
-          echo ""
-          echo "**PyPI:** https://pypi.org/project/claude-agent-sdk/VERSION/"
-          echo ""
-          echo '```bash'
-          echo "pip install claude-agent-sdk==VERSION"
-          echo '```'
-        } >> release_notes.md
-
-        # Replace VERSION placeholder
-        sed -i "s/VERSION/$VERSION/g" release_notes.md
-
-        # Create release with notes from file
-        gh release create "v$VERSION" \
-          --title "v$VERSION" \
-          --notes-file release_notes.md
+      run: "VERSION=\"${{ steps.extract_version.outputs.version }}\"\n\n# Extract\
+        \ changelog section for this version to a temp file\nawk -v ver=\"$VERSION\"\
+        \ '\n  /^## / {\n    if (found) exit\n    if ($2 == ver) found=1\n    next\n\
+        \  }\n  found { print }\n' CHANGELOG.md > release_notes.md\n\n# Append install\
+        \ instructions\n{\n  echo \"\"\n  echo \"---\"\n  echo \"\"\n  echo \"**PyPI:**\
+        \ https://pypi.org/project/claude-agent-sdk/VERSION/\"\n  echo \"\"\n  echo\
+        \ '```bash'\n  echo \"pip install claude-agent-sdk==VERSION\"\n  echo '```'\n\
+        } >> release_notes.md\n\n# Replace VERSION placeholder\nsed -i \"s/VERSION/$VERSION/g\"\
+        \ release_notes.md\n\n# Create release with notes from file\ngh release create\
+        \ \"v$VERSION\" \\\n  --title \"v$VERSION\" \\\n  --notes-file release_notes.md\n"
